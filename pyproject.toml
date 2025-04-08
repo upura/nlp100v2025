@@ -12,3 +12,8 @@ dependencies = [
     "mecab-python3>=1.0.10",
     "pandas>=2.2.3",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11.4",
+]
