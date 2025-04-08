@@ -1,1 +1,1 @@
-sed -e 's/[[:cntrl:]]/ /g' ch02/popular-names.txt >> ch02/ans11.txt
+head -10 ch02/popular-names.txt
