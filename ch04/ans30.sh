@@ -1,1 +1,1 @@
-mecab < ch04/neko.txt > ch04/neko.txt.mecab
+mecab < ch04/sample.txt > ch04/sample.txt.mecab
