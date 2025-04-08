@@ -1,4 +1,5 @@
 env
+.env
 .vscode
 */*.txt*
 *.tsv
@@ -14,3 +15,4 @@ logdir
 kftt-data-1.0
 *.pth
 *.pt
+JMMLU
