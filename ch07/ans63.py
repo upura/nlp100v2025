@@ -1,5 +1,9 @@
-from gensim.models import KeyedVectors
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
 
-model = KeyedVectors.load_word2vec_format('ch07/GoogleNews-vectors-negative300.bin', binary=True)
-result = model.most_similar(positive=['Spain', 'Athens'], negative=['Madrid'], topn=10)
-print(result)
+X_train = pd.read_table("ch07/train.feature.txt", header=None)
+y_train = pd.read_table("ch07/train.txt", header=None)[1]
+
+clf = LogisticRegression(penalty="l2", solver="sag", random_state=0)
+clf.fit(X_train, y_train)
+y_train = clf.predict(X_train)

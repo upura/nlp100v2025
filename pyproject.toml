@@ -5,12 +5,14 @@ description = "Python implementation of nlp100v2025"
 readme = "README.md"
 requires-python = ">=3.11.11"
 dependencies = [
+    "gensim>=4.3.3",
     "ginza>=5.2.0",
     "ja-ginza>=5.2.0",
     "japanize-matplotlib>=1.1.3",
     "matplotlib>=3.10.1",
     "mecab-python3>=1.0.10",
     "pandas>=2.2.3",
+    "scikit-learn>=1.6.1",
 ]
 
 [dependency-groups]

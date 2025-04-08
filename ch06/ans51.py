@@ -1,29 +1,6 @@
-import joblib
-import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
+from gensim.models import KeyedVectors
 
-X_train = pd.read_table('ch06/train.txt', header=None)
-X_valid = pd.read_table('ch06/valid.txt', header=None)
-X_test = pd.read_table('ch06/test.txt', header=None)
-use_cols = ['TITLE', 'CATEGORY']
-X_train.columns = use_cols
-X_valid.columns = use_cols
-X_test.columns = use_cols
-X_train['TMP'] = 'train'
-X_valid['TMP'] = 'valid'
-X_test['TMP'] = 'test'
-
-data = pd.concat([X_train, X_valid, X_test]).reset_index(drop=True)
-vectorizer = CountVectorizer(token_pattern=u'(?u)\\b\\w+\\b')
-bag = vectorizer.fit_transform(data['TITLE'])
-data = pd.concat([data, pd.DataFrame(bag.toarray())], axis=1)
-
-joblib.dump(vectorizer.vocabulary_, 'ch06/vocabulary_.joblib')
-
-X_train = data.query('TMP=="train"').drop(use_cols + ['TMP'], axis=1)
-X_valid = data.query('TMP=="valid"').drop(use_cols + ['TMP'], axis=1)
-X_test = data.query('TMP=="test"').drop(use_cols + ['TMP'], axis=1)
-
-X_train.to_csv('ch06/train.feature.txt', sep='\t', index=False, header=None)
-X_valid.to_csv('ch06/valid.feature.txt', sep='\t', index=False, header=None)
-X_test.to_csv('ch06/test.feature.txt', sep='\t', index=False, header=None)
+model = KeyedVectors.load_word2vec_format(
+    "ch06/GoogleNews-vectors-negative300.bin", binary=True
+)
+print(model.similarity("United_States", "U.S."))

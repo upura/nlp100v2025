@@ -1,5 +1,10 @@
-from gensim.models import KeyedVectors
+import joblib
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
 
-model = KeyedVectors.load_word2vec_format('ch07/GoogleNews-vectors-negative300.bin', binary=True)
-result = model.most_similar(positive=['United_States'], topn=10)
-print(result)
+X_train = pd.read_table("ch07/train.feature.txt", header=None)
+y_train = pd.read_table("ch07/train.txt", header=None)[1]
+
+clf = LogisticRegression(penalty="l2", solver="sag", random_state=0)
+clf.fit(X_train, y_train)
+joblib.dump(clf, "ch07/model.joblib")

@@ -8,9 +8,8 @@ env
 *.joblib
 *.bin
 ch02/ans16_*
-ch05/ai.ja/ai.ja.txt
-ch06/NewsAggregatorDataset
-ch07/wordsim353
+ch06/wordsim353
+ch07/NewsAggregatorDataset
 logdir
 kftt-data-1.0
 *.pth

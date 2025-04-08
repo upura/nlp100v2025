@@ -1,19 +1,13 @@
+import joblib
 import pandas as pd
-from gensim.models import KeyedVectors
-from tqdm import tqdm
+from sklearn.metrics import accuracy_score
 
+X_train = pd.read_table("ch07/train.feature.txt", header=None)
+X_test = pd.read_table("ch07/test.feature.txt", header=None)
+y_train = pd.read_table("ch07/train.txt", header=None)[1]
+y_test = pd.read_table("ch07/test.txt", header=None)[1]
 
-def culcSim(row):
-    global model
-    return pd.Series(list(model.most_similar(positive=[row['v2'], row['v3']], negative=[row['v1']])[0]))
+clf = joblib.load("ch07/model.joblib")
 
-
-tqdm.pandas()
-df = pd.read_csv('ch07/questions-words.txt', sep=' ')
-df = df.reset_index()
-df.columns = ['v1', 'v2', 'v3', 'v4']
-df.dropna(inplace=True)
-
-model = KeyedVectors.load_word2vec_format('ch07/GoogleNews-vectors-negative300.bin', binary=True)
-df[['simWord', 'simScore']] = df.progress_apply(culcSim, axis=1)
-df.to_csv('ch07/ans64.txt', sep=' ', index=False, header=None)
+print(f"train acc: {accuracy_score(y_train, clf.predict(X_train))}")
+print(f"test acc: {accuracy_score(y_test, clf.predict(X_test))}")

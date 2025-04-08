@@ -1,12 +1,24 @@
-import joblib
+import numpy as np
+import pandas as pd
+from gensim.models import KeyedVectors
+from sklearn.cluster import KMeans
 
-clf = joblib.load('ch06/model.joblib')
-vocabulary_ = joblib.load('ch06/vocabulary_.joblib')
-coefs = clf.coef_
+df = pd.read_csv("ch06/questions-words.txt", sep=" ")
+df = df.reset_index()
+df.columns = ["v1", "v2", "v3", "v4"]
+df.dropna(inplace=True)
+df = df.iloc[:5030]
+country = list(set(df["v4"].values))
 
-for c in coefs:
-    d = dict(zip(vocabulary_, c))
-    d_top = sorted(d.items(), key=lambda x: abs(x[1]), reverse=True)[:10]
-    print(d_top)
-    d_bottom = sorted(d.items(), key=lambda x: abs(x[1]), reverse=False)[:10]
-    print(d_bottom)
+model = KeyedVectors.load_word2vec_format(
+    "ch06/GoogleNews-vectors-negative300.bin", binary=True
+)
+
+countryVec = []
+for c in country:
+    countryVec.append(model[c])
+
+X = np.array(countryVec)
+km = KMeans(n_clusters=5, random_state=0)
+y_km = km.fit_predict(X)
+print(y_km)

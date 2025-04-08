@@ -1,26 +1,29 @@
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-from gensim.models import KeyedVectors
-from scipy.cluster.hierarchy import dendrogram, linkage
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 
-df = pd.read_csv('ch07/questions-words.txt', sep=' ')
-df = df.reset_index()
-df.columns = ['v1', 'v2', 'v3', 'v4']
-df.dropna(inplace=True)
-df = df.iloc[:5030]
-country = list(set(df["v4"].values))
+X_train = pd.read_table("ch06/train.feature.txt", header=None)
+X_valid = pd.read_table("ch06/valid.feature.txt", header=None)
+X_test = pd.read_table("ch06/test.feature.txt", header=None)
+y_train = pd.read_table("ch06/train.txt", header=None)[1]
+y_valid = pd.read_table("ch06/valid.txt", header=None)[1]
+y_test = pd.read_table("ch06/test.txt", header=None)[1]
 
-model = KeyedVectors.load_word2vec_format('ch07/GoogleNews-vectors-negative300.bin', binary=True)
+C_candidate = [0.1, 1.0, 10, 100]
+train_acc = []
+valid_acc = []
+test_acc = []
 
-countryVec = []
-countryName = []
-for c in country:
-    countryVec.append(model[c])
-    countryName.append(c)
+for c in C_candidate:
+    clf = LogisticRegression(penalty="l2", solver="sag", random_state=0, C=c)
+    clf.fit(X_train, y_train)
+    train_acc.append(accuracy_score(y_train, clf.predict(X_train)))
+    valid_acc.append(accuracy_score(y_valid, clf.predict(X_valid)))
+    test_acc.append(accuracy_score(y_test, clf.predict(X_test)))
 
-X = np.array(countryVec)
-linkage_result = linkage(X, method='ward', metric='euclidean')
-plt.figure(num=None, figsize=(16, 9), dpi=200, facecolor='w', edgecolor='k')
-dendrogram(linkage_result, labels=countryName)
-plt.show()
+plt.plot(C_candidate, train_acc, label="train acc")
+plt.plot(C_candidate, valid_acc, label="valid acc")
+plt.plot(C_candidate, test_acc, label="test acc")
+plt.legend()
+plt.savefig("ch07/ans68.png")
