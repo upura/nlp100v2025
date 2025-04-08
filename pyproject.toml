@@ -1,0 +1,7 @@
+[project]
+name = "nlp100v2025"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.8.6"
+dependencies = []
