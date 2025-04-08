@@ -679,6 +679,7 @@ dependencies = [
     { name = "japanize-matplotlib" },
     { name = "matplotlib" },
     { name = "mecab-python3" },
+    { name = "numpy" },
     { name = "pandas" },
     { name = "scikit-learn" },
 ]
@@ -696,6 +697,7 @@ requires-dist = [
     { name = "japanize-matplotlib", specifier = ">=1.1.3" },
     { name = "matplotlib", specifier = ">=3.10.1" },
     { name = "mecab-python3", specifier = ">=1.0.10" },
+    { name = "numpy", specifier = ">=1.26.4" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "scikit-learn", specifier = ">=1.6.1" },
 ]
