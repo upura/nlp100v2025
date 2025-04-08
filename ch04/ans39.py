@@ -1,42 +1,63 @@
-import math
-from collections import defaultdict
-
+import json
+import gzip
+import re
+import MeCab
 import matplotlib.pyplot as plt
+from collections import Counter
+import japanize_matplotlib
 
 
-def parse_mecab(block):
-    res = []
-    for line in block.split('\n'):
-        if line == '':
-            return res
-        (surface, attr) = line.split('\t')
-        attr = attr.split(',')
-        lineDict = {
-            'surface': surface,
-            'base': attr[6],
-            'pos': attr[0],
-            'pos1': attr[1]
-        }
-        res.append(lineDict)
+def remove_markup(text):
+    # 強調マークアップの除去
+    text = re.sub(r'\'{2,5}', '', text)
+    # 内部リンクの除去
+    text = re.sub(r'\[\[(?:[^|\]]*?\|)??([^|\]]+?)\]\]', r'\1', text)
+    # 外部リンクの除去
+    text = re.sub(r'\[http://[^\]]+\]', '', text)
+    # HTMLタグの除去
+    text = re.sub(r'<[^>]+>', '', text)
+    # テンプレートの除去
+    text = re.sub(r'\{\{.*?\}\}', '', text)
+    return text
 
+def plot_word_frequency_rank():
+    # MeCabの初期化
+    mecab = MeCab.Tagger("-Owakati")
+    
+    # 単語の出現頻度をカウントするためのCounter
+    word_counter = Counter()
+    
+    # gzipファイルを読み込む
+    with gzip.open('ch04/jawiki-country.json.gz', 'rt', encoding='utf-8') as f:
+        for line in f:
+            article = json.loads(line)
+            text = article['text']
+            
+            # マークアップを除去
+            text = remove_markup(text)
+            
+            # 形態素解析を行い、単語をカウント
+            words = mecab.parse(text).strip().split()
+            word_counter.update(words)
+    
+    # 出現頻度の順位と頻度を取得
+    frequencies = list(word_counter.values())
+    frequencies.sort(reverse=True)
+    ranks = range(1, len(frequencies) + 1)
+    
+    # グラフの描画
+    japanize_matplotlib.japanize()
+    plt.figure(figsize=(10, 6))
+    plt.loglog(ranks, frequencies, 'b-', label='単語の出現頻度')
+    plt.grid(True)
+    plt.xlabel('出現頻度順位')
+    plt.ylabel('出現頻度')
+    plt.title('単語の出現頻度順位と出現頻度の関係（Zipfの法則）')
+    plt.legend()
+    
+    # グラフを保存
+    plt.savefig('ch04/word_frequency_rank.png')
+    plt.close()
 
-def extract_words(block):
-    return [b['base'] + '_' + b['pos'] + '_' + b['pos1'] for b in block]
-
-
-filename = 'ch04/neko.txt.mecab'
-with open(filename, mode='rt', encoding='utf-8') as f:
-    blocks = f.read().split('EOS\n')
-blocks = list(filter(lambda x: x != '', blocks))
-blocks = [parse_mecab(block) for block in blocks]
-words = [extract_words(block) for block in blocks]
-d = defaultdict(int)
-for word in words:
-    for w in word:
-        d[w] += 1
-ans = sorted(d.items(), key=lambda x: x[1], reverse=True)
-ranks = [math.log(r + 1) for r in range(len(ans))]
-values = [math.log(a[1]) for a in ans]
-plt.figure(figsize=(8, 8))
-plt.scatter(ranks, values)
-plt.savefig('ch04/ans39.png')
+if __name__ == "__main__":
+    plot_word_frequency_rank()
