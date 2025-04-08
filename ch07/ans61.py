@@ -1,29 +1,23 @@
-import joblib
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
+from collections import defaultdict
 
-X_train = pd.read_table("ch07/train.txt", header=None)
-X_valid = pd.read_table("ch07/valid.txt", header=None)
-X_test = pd.read_table("ch07/test.txt", header=None)
-use_cols = ["TITLE", "CATEGORY"]
-X_train.columns = use_cols
-X_valid.columns = use_cols
-X_test.columns = use_cols
-X_train["TMP"] = "train"
-X_valid["TMP"] = "valid"
-X_test["TMP"] = "test"
 
-data = pd.concat([X_train, X_valid, X_test]).reset_index(drop=True)
-vectorizer = CountVectorizer(token_pattern="(?u)\\b\\w+\\b")
-bag = vectorizer.fit_transform(data["TITLE"])
-data = pd.concat([data, pd.DataFrame(bag.toarray())], axis=1)
+def add_feature(sentence, label):
+    data = {"sentence": sentence, "label": label, "feature": defaultdict(int)}
+    for token in sentence.split():
+        data["feature"][token] += 1
+    return data
 
-joblib.dump(vectorizer.vocabulary_, "ch07/vocabulary_.joblib")
 
-X_train = data.query('TMP=="train"').drop(use_cols + ["TMP"], axis=1)
-X_valid = data.query('TMP=="valid"').drop(use_cols + ["TMP"], axis=1)
-X_test = data.query('TMP=="test"').drop(use_cols + ["TMP"], axis=1)
+df_train = pd.read_csv("ch07/SST-2/train.tsv", sep="\t")
+df_dev = pd.read_csv("ch07/SST-2/dev.tsv", sep="\t")
 
-X_train.to_csv("ch07/train.feature.txt", sep="\t", index=False, header=None)
-X_valid.to_csv("ch07/valid.feature.txt", sep="\t", index=False, header=None)
-X_test.to_csv("ch07/test.feature.txt", sep="\t", index=False, header=None)
+data_train = []
+for sentence, label in zip(df_train["sentence"], df_train["label"]):
+    data_train.append(add_feature(sentence, label))
+
+data_dev = []
+for sentence, label in zip(df_dev["sentence"], df_dev["label"]):
+    data_dev.append(add_feature(sentence, label))
+
+print(data_train[0])

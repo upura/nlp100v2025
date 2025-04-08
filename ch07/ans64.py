@@ -1,13 +1,37 @@
-import joblib
 import pandas as pd
-from sklearn.metrics import accuracy_score
+import pickle
+from collections import defaultdict
 
-X_train = pd.read_table("ch07/train.feature.txt", header=None)
-X_test = pd.read_table("ch07/test.feature.txt", header=None)
-y_train = pd.read_table("ch07/train.txt", header=None)[1]
-y_test = pd.read_table("ch07/test.txt", header=None)[1]
 
-clf = joblib.load("ch07/model.joblib")
+def add_feature(sentence, label):
+    data = {"sentence": sentence, "label": label, "feature": defaultdict(int)}
+    for token in sentence.split():
+        data["feature"][token] += 1
+    return data
 
-print(f"train acc: {accuracy_score(y_train, clf.predict(X_train))}")
-print(f"test acc: {accuracy_score(y_test, clf.predict(X_test))}")
+
+# モデルとベクトライザーの読み込み
+with open("ch07/logistic_model.pkl", "rb") as f:
+    model = pickle.load(f)
+with open("ch07/vectorizer.pkl", "rb") as f:
+    vec = pickle.load(f)
+
+# 検証データの読み込み
+df_dev = pd.read_csv("ch07/SST-2/dev.tsv", sep="\t")
+
+# 検証データの先頭の事例を取得
+first_sentence = df_dev["sentence"].iloc[0]
+first_label = df_dev["label"].iloc[0]
+
+# 特徴ベクトルの構築
+data = add_feature(first_sentence, first_label)
+
+# 特徴ベクトルの変換
+X = vec.transform([data["feature"]])
+
+# ラベルの予測
+predicted_label = model.predict(X)[0]
+predicted_prob = model.predict_proba(X)[0]
+
+# 結果の表示
+print(f"条件付確率（尤度）: {predicted_prob}")

@@ -1,29 +1,48 @@
-import matplotlib.pyplot as plt
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+import pickle
+from collections import defaultdict
+from sklearn.metrics import (
+    precision_score,
+    recall_score,
+    f1_score,
+)
 
-X_train = pd.read_table("ch06/train.feature.txt", header=None)
-X_valid = pd.read_table("ch06/valid.feature.txt", header=None)
-X_test = pd.read_table("ch06/test.feature.txt", header=None)
-y_train = pd.read_table("ch06/train.txt", header=None)[1]
-y_valid = pd.read_table("ch06/valid.txt", header=None)[1]
-y_test = pd.read_table("ch06/test.txt", header=None)[1]
 
-C_candidate = [0.1, 1.0, 10, 100]
-train_acc = []
-valid_acc = []
-test_acc = []
+def add_feature(sentence, label):
+    data = {"sentence": sentence, "label": label, "feature": defaultdict(int)}
+    for token in sentence.split():
+        data["feature"][token] += 1
+    return data
 
-for c in C_candidate:
-    clf = LogisticRegression(penalty="l2", solver="sag", random_state=0, C=c)
-    clf.fit(X_train, y_train)
-    train_acc.append(accuracy_score(y_train, clf.predict(X_train)))
-    valid_acc.append(accuracy_score(y_valid, clf.predict(X_valid)))
-    test_acc.append(accuracy_score(y_test, clf.predict(X_test)))
 
-plt.plot(C_candidate, train_acc, label="train acc")
-plt.plot(C_candidate, valid_acc, label="valid acc")
-plt.plot(C_candidate, test_acc, label="test acc")
-plt.legend()
-plt.savefig("ch07/ans68.png")
+# モデルとベクトライザーの読み込み
+with open("ch07/logistic_model.pkl", "rb") as f:
+    model = pickle.load(f)
+with open("ch07/vectorizer.pkl", "rb") as f:
+    vec = pickle.load(f)
+
+# 検証データの読み込み
+df_dev = pd.read_csv("ch07/SST-2/dev.tsv", sep="\t")
+
+# 特徴ベクトルの構築
+data_dev = []
+for sentence, label in zip(df_dev["sentence"], df_dev["label"]):
+    data_dev.append(add_feature(sentence, label))
+
+# 特徴ベクトルの変換
+X_dev = vec.transform([d["feature"] for d in data_dev])
+y_dev = [d["label"] for d in data_dev]
+
+# 予測
+y_dev_pred = model.predict(X_dev)
+
+# 評価指標の計算
+precision = precision_score(y_dev, y_dev_pred)
+recall = recall_score(y_dev, y_dev_pred)
+f1 = f1_score(y_dev, y_dev_pred)
+
+# 結果の表示
+print("検証データにおける評価指標:")
+print(f"適合率 (Precision): {precision:.4f}")
+print(f"再現率 (Recall): {recall:.4f}")
+print(f"F1スコア: {f1:.4f}")

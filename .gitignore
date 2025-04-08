@@ -5,11 +5,11 @@ env
 *.gz
 *.png
 *.zip
-*.joblib
+*.pkl
 *.bin
 ch02/ans16_*
 ch06/wordsim353
-ch07/NewsAggregatorDataset
+ch07/SST-2
 logdir
 kftt-data-1.0
 *.pth
