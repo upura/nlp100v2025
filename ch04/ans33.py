@@ -1,20 +1,22 @@
 import spacy
 
+
 def analyze_dependencies(text):
     # 日本語のモデルをロード
-    nlp = spacy.load('ja_ginza')
-    
+    nlp = spacy.load("ja_ginza")
+
     # テキストを解析
     doc = nlp(text)
-    
+
     # 係り受け関係を抽出
     for token in doc:
-        if token.dep_ != 'ROOT':  # ROOTは係り先がないので除外
+        if token.dep_ != "ROOT":  # ROOTは係り先がないので除外
             # 係り元と係り先のテキストを取得
             source = token.text
             target = token.head.text
             # タブ区切りで出力
             print(f"{source}\t{target}")
+
 
 # テスト用のテキスト
 text = """メロスは激怒した。

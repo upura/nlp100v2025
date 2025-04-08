@@ -10,11 +10,11 @@ text = """メロスは激怒した。
 けれども邪悪に対しては、人一倍に敏感であった。"""
 
 # 日本語のモデルをロード
-nlp = spacy.load('ja_ginza')
+nlp = spacy.load("ja_ginza")
 
 # テキストを解析
 text = "メロスは激怒した。"
 doc = nlp(text)
 
 # 係り受け木を可視化
-displacy.serve(doc, style='dep', port=8000)
+displacy.serve(doc, style="dep", port=8000)

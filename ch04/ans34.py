@@ -1,22 +1,23 @@
 import spacy
 
 
-def extract_predicates_for_subject(text, subject='メロス'):
+def extract_predicates_for_subject(text, subject="メロス"):
     # 日本語のモデルをロード
-    nlp = spacy.load('ja_ginza')
-    
+    nlp = spacy.load("ja_ginza")
+
     # テキストを解析
     doc = nlp(text)
-    
+
     # 述語を抽出
     predicates = []
     for token in doc:
-        if token.text == subject and token.dep_ == 'nsubj':
+        if token.text == subject and token.dep_ == "nsubj":
             # 主語に対応する述語を取得
             predicate = token.head
             predicates.append(predicate.text)
-    
+
     return predicates
+
 
 # テスト用のテキスト
 text = """メロスは激怒した。
