@@ -1,14 +1,14 @@
 [project]
 name = "nlp100v2025"
 version = "0.1.0"
-description = "Add your description here"
+description = "Python implementation of nlp100v2025"
 readme = "README.md"
-requires-python = ">=3.8.6"
+requires-python = ">=3.11.11"
 dependencies = [
     "ginza>=5.2.0",
     "ja-ginza>=5.2.0",
     "japanize-matplotlib>=1.1.3",
-    "matplotlib>=3.7.5",
+    "matplotlib>=3.10.1",
     "mecab-python3>=1.0.10",
-    "pandas>=2.0.3",
+    "pandas>=2.2.3",
 ]
