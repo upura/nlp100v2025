@@ -34,4 +34,4 @@ predicted_label = model.predict(X)[0]
 predicted_prob = model.predict_proba(X)[0]
 
 # 結果の表示
-print(f"条件付確率（尤度）: {predicted_prob}")
+print(f"条件付き確率: {predicted_prob}")
