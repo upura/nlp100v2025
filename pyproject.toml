@@ -17,6 +17,8 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
+    "torch",
+    "transformers>=4.51.1",
 ]
 
 [dependency-groups]
