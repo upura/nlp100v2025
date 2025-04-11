@@ -8,7 +8,7 @@ from transformers import (
 )
 from torch.utils.data import Dataset
 import pandas as pd
-from sklearn.metrics import accuracy_score
+import evaluate
 
 
 # カスタムモデルの定義
@@ -66,7 +66,6 @@ class SSTDataset(Dataset):
             truncation=True,
             return_tensors="pt",
         )
-
         return {
             "input_ids": encoding["input_ids"].squeeze(),
             "attention_mask": encoding["attention_mask"].squeeze(),
@@ -76,9 +75,10 @@ class SSTDataset(Dataset):
 
 # 評価用の関数
 def compute_metrics(eval_pred):
+    metric = evaluate.load("accuracy")
     predictions, labels = eval_pred
     predictions = predictions.argmax(axis=1)
-    return {"accuracy": accuracy_score(labels, predictions)}
+    return metric.compute(predictions=predictions, references=labels)
 
 
 # メイン処理
