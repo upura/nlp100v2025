@@ -1,66 +1,46 @@
-class Morph:
-    def __init__(self, dc):
-        self.surface = dc['surface']
-        self.base = dc['base']
-        self.pos = dc['pos']
-        self.pos1 = dc['pos1']
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
 
+# 環境変数からAPIキーを読み込む
+load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
 
-class Chunk:
-    def __init__(self, morphs, dst):
-        self.morphs = morphs    # 形態素（Morphオブジェクト）のリスト
-        self.dst = dst          # 係り先文節インデックス番号
-        self.srcs = []          # 係り元文節インデックス番号のリスト
+# APIキーを設定
+genai.configure(api_key=api_key)
 
+# モデルの設定
+model = genai.GenerativeModel("gemini-1.5-flash-8b")
 
-def parse_cabocha(block):
-    def check_create_chunk(tmp):
-        if len(tmp) > 0:
-            c = Chunk(tmp, dst)
-            res.append(c)
-            tmp = []
-        return tmp
+# チャット履歴の開始
+chat = model.start_chat(history=[])
 
-    res = []
-    tmp = []
-    dst = None
-    for line in block.split('\n'):
-        if line == '':
-            tmp = check_create_chunk(tmp)
-        elif line[0] == '*':
-            dst = line.split(' ')[2].rstrip('D')
-            tmp = check_create_chunk(tmp)
-        else:
-            (surface, attr) = line.split('\t')
-            attr = attr.split(',')
-            lineDict = {
-                'surface': surface,
-                'base': attr[6],
-                'pos': attr[0],
-                'pos1': attr[1]
-            }
-            tmp.append(Morph(lineDict))
+# 最初の質問
+user_question1 = """
+つばめちゃんは渋谷駅から東急東横線に乗り、自由が丘駅で乗り換えました。東急大井町線の大井町方面の電車に乗り換えたとき、各駅停車に乗車すべきところ、間違えて急行に乗車してしまったことに気付きました。自由が丘の次の急行停車駅で降車し、反対方向の電車で一駅戻った駅がつばめちゃんの目的地でした。目的地の駅の名前を答えてください。
 
-    for i, r in enumerate(res):
-        res[int(r.dst)].srcs.append(i)
-    return res
+参考情報として、東急大井町線の駅一覧と急行停車駅は以下の通りです：
 
+東急大井町線: 大井町 → 下神明 → 戸越公園 → 中延 → 荏原町 → 旗の台 → 北千束 → 大岡山 → 緑が丘 → 自由が丘 → 九品仏 → 尾山台 → 等々力 → 上野毛 → 二子玉川 → 二子新地 → 高津 → 溝の口 → 梶が谷 → 宮崎台 → 宮前平 → 鷺沼 → たまプラーザ → あざみ野 → 江田 → 市が尾 → 藤が丘 → 青葉台 → 田奈 → 長津田 → つきみ野 → 中央林間
 
-filename = 'ch05/ai.ja.txt.cabocha'
-with open(filename, mode='rt', encoding='utf-8') as f:
-    blocks = f.read().split('EOS\n')
-blocks = list(filter(lambda x: x != '', blocks))
-blocks = [parse_cabocha(block) for block in blocks]
+急行停車駅: 大井町、大岡山、自由が丘、二子玉川、溝の口、長津田、中央林間
+"""
 
-for b in blocks:
-    for m in b:
-        if len(m.srcs) > 0:
-            pre_morphs = [b[int(s)].morphs for s in m.srcs]
-            pre_morphs = [list(filter(lambda x: '助詞' in x.pos, pm)) for pm in pre_morphs]
-            pre_surface = [[p.surface for p in pm] for pm in pre_morphs]
-            pre_surface = list(filter(lambda x: x != [], pre_surface))
-            pre_surface = [p[0] for p in pre_surface]
-            post_base = [mo.base for mo in m.morphs]
-            post_pos = [mo.pos for mo in m.morphs]
-            if len(pre_surface) > 0 and '動詞' in post_pos:
-                print(post_base[0], ' '.join(pre_surface), sep='\t')
+# 最初の回答を取得
+response1 = chat.send_message(user_question1)
+print("【質問1】")
+print("目的地の駅を教えてください。")
+print("\n【システムの回答】")
+print(response1.text)
+
+# 追加の質問
+user_question2 = """
+さらに、つばめちゃんが自由が丘駅で乗り換えたとき、先ほどとは反対方向の急行電車に間違って乗車してしまった場合を考えます。目的地の駅に向かうため、自由が丘の次の急行停車駅で降車した後、反対方向の各駅停車に乗車した場合、何駅先の駅で降りれば良いでしょうか？
+"""
+
+# 追加の回答を取得
+response2 = chat.send_message(user_question2)
+print("\n【質問2】")
+print("反対方向に乗った場合、何駅先で降りれば良いですか？")
+print("\n【システムの回答】")
+print(response2.text)

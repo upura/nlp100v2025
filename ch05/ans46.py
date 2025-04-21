@@ -1,68 +1,41 @@
-class Morph:
-    def __init__(self, dc):
-        self.surface = dc['surface']
-        self.base = dc['base']
-        self.pos = dc['pos']
-        self.pos1 = dc['pos1']
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
 
+# 環境変数からAPIキーを読み込む
+load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
 
-class Chunk:
-    def __init__(self, morphs, dst):
-        self.morphs = morphs    # 形態素（Morphオブジェクト）のリスト
-        self.dst = dst          # 係り先文節インデックス番号
-        self.srcs = []          # 係り元文節インデックス番号のリスト
+# APIキーを設定
+genai.configure(api_key=api_key)
 
+# モデルの設定
+model = genai.GenerativeModel("gemini-1.5-flash-8b")
 
-def parse_cabocha(block):
-    def check_create_chunk(tmp):
-        if len(tmp) > 0:
-            c = Chunk(tmp, dst)
-            res.append(c)
-            tmp = []
-        return tmp
+# プロンプトの作成
+prompt = """
+以下の条件で川柳を10個作成してください：
 
-    res = []
-    tmp = []
-    dst = None
-    for line in block.split('\n'):
-        if line == '':
-            tmp = check_create_chunk(tmp)
-        elif line[0] == '*':
-            dst = line.split(' ')[2].rstrip('D')
-            tmp = check_create_chunk(tmp)
-        else:
-            (surface, attr) = line.split('\t')
-            attr = attr.split(',')
-            lineDict = {
-                'surface': surface,
-                'base': attr[6],
-                'pos': attr[0],
-                'pos1': attr[1]
-            }
-            tmp.append(Morph(lineDict))
+1. お題：「春の訪れ」
+2. 川柳の形式：
+   - 5音、7音、5音の17音
+   - 季語を含める
+   - 現代的な表現やユーモアを交える
+3. 各川柳の後に簡単な解説を付ける
 
-    for i, r in enumerate(res):
-        res[int(r.dst)].srcs.append(i)
-    return res
+出力形式：
+1. [川柳]
+   解説：[解説文]
 
+2. [川柳]
+   解説：[解説文]
 
-filename = 'ch05/ai.ja.txt.cabocha'
-with open(filename, mode='rt', encoding='utf-8') as f:
-    blocks = f.read().split('EOS\n')
-blocks = list(filter(lambda x: x != '', blocks))
-blocks = [parse_cabocha(block) for block in blocks]
+（以下10個分続く）
+"""
 
-for b in blocks:
-    for m in b:
-        if len(m.srcs) > 0:
-            pre_morphs = [b[int(s)].morphs for s in m.srcs]
-            pre_morphs_filtered = [list(filter(lambda x: '助詞' in x.pos, pm)) for pm in pre_morphs]
-            pre_surface = [[p.surface for p in pm] for pm in pre_morphs_filtered]
-            pre_surface = list(filter(lambda x: x != [], pre_surface))
-            pre_surface = [p[0] for p in pre_surface]
-            post_base = [mo.base for mo in m.morphs]
-            post_pos = [mo.pos for mo in m.morphs]
-            if len(pre_surface) > 0 and '動詞' in post_pos:
-                pre_text = list(filter(lambda x: '助詞' in [p.pos for p in x], pre_morphs))
-                pre_text = [''.join([p.surface for p in pt]) for pt in pre_text]
-                print(post_base[0], ' '.join(pre_surface), ' '.join(pre_text), sep='\t')
+# APIリクエストの送信
+response = model.generate_content(prompt)
+
+# 結果の表示
+print("川柳の案：")
+print(response.text)

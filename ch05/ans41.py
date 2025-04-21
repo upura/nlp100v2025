@@ -1,55 +1,70 @@
-class Morph:
-    def __init__(self, dc):
-        self.surface = dc['surface']
-        self.base = dc['base']
-        self.pos = dc['pos']
-        self.pos1 = dc['pos1']
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
 
+# 環境変数からAPIキーを読み込む
+load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
 
-class Chunk:
-    def __init__(self, morphs, dst):
-        self.morphs = morphs    # 形態素（Morphオブジェクト）のリスト
-        self.dst = dst          # 係り先文節インデックス番号
-        self.srcs = []          # 係り元文節インデックス番号のリスト
+# APIキーを設定
+genai.configure(api_key=api_key)
 
+# モデルの設定
+model = genai.GenerativeModel("gemini-1.5-flash-8b")
 
-def parse_cabocha(block):
-    def check_create_chunk(tmp):
-        if len(tmp) > 0:
-            c = Chunk(tmp, dst)
-            res.append(c)
-            tmp = []
-        return tmp
+# プロンプトの作成
+prompt = """
+以下の例を参考に、最後の問題の解答を導き出してください。
 
-    res = []
-    tmp = []
-    dst = None
-    for line in block.split('\n'):
-        if line == '':
-            tmp = check_create_chunk(tmp)
-        elif line[0] == '*':
-            dst = line.split(' ')[2].rstrip('D')
-            tmp = check_create_chunk(tmp)
-        else:
-            (surface, attr) = line.split('\t')
-            attr = attr.split(',')
-            lineDict = {
-                'surface': surface,
-                'base': attr[6],
-                'pos': attr[0],
-                'pos1': attr[1]
-            }
-            tmp.append(Morph(lineDict))
+例題1:
+日本の近代化に関連するできごとについて述べた次のア～ウを年代の古い順に正しく並べよ。
 
-    for i, r in enumerate(res):
-        res[int(r.dst)].srcs.append(i)
-    return res
+ア　府知事・県令からなる地方官会議が設置された。
+イ　廃藩置県が実施され，中央から府知事・県令が派遣される体制になった。
+ウ　すべての藩主が，天皇に領地と領民を返還した。
 
+解答: ウ→イ→ア
 
-filename = 'ch05/ai.ja.txt.cabocha'
-with open(filename, mode='rt', encoding='utf-8') as f:
-    blocks = f.read().split('EOS\n')
-blocks = list(filter(lambda x: x != '', blocks))
-blocks = [parse_cabocha(block) for block in blocks]
-for m in blocks[7]:
-    print([mo.surface for mo in m.morphs], m.dst, m.srcs)
+例題2:
+江戸幕府の北方での対外的な緊張について述べた次の文ア～ウを年代の古い順に正しく並べよ。
+
+ア　レザノフが長崎に来航したが，幕府が冷淡な対応をしたため，ロシア船が樺太や択捉島を攻撃した。
+イ　ゴローウニンが国後島に上陸し，幕府の役人に捕らえられ抑留された。
+ウ　ラクスマンが根室に来航し，漂流民を届けるとともに通商を求めた。
+
+解答: ウ→ア→イ
+
+例題3:
+中居屋重兵衛の生涯の期間におこったできごとについて述べた次のア～ウを，年代の古い順に正しく並べよ。
+
+ア　アヘン戦争がおこり，清がイギリスに敗北した。
+イ　異国船打払令が出され，外国船を撃退することが命じられた。
+ウ　桜田門外の変がおこり，大老の井伊直弼が暗殺された。
+
+解答: イ→ア→ウ
+
+例題4:
+加藤高明が外務大臣として提言を行ってから、内閣総理大臣となり演説を行うまでの時期のできごとについて述べた次のア～ウを，年代の古い順に正しく並べよ。
+
+ア　朝鮮半島において，独立を求める大衆運動である三・一独立運動が展開された。
+イ　関東大震災後の混乱のなかで，朝鮮人や中国人に対する殺傷事件がおきた。
+ウ　日本政府が，袁世凱政府に対して二十一カ条の要求を突き付けた。
+
+解答: ウ→ア→イ
+
+問題:
+9世紀に活躍した人物に関係するできごとについて述べた次のア～ウを年代の古い順に正しく並べよ。
+
+ア　藤原時平は，策謀を用いて菅原道真を政界から追放した。
+イ　嵯峨天皇は，藤原冬嗣らを蔵人頭に任命した。
+ウ　藤原良房は，承和の変後，藤原氏の中での北家の優位を確立した。
+
+上記の例を参考に、この問題の解答を示してください。具体的な年代とともに説明を加えてください。
+"""
+
+# APIリクエストの送信
+response = model.generate_content(prompt)
+
+# 結果の表示
+print("解答:")
+print(response.text)

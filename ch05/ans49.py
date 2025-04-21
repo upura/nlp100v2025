@@ -1,84 +1,46 @@
-class Morph:
-    def __init__(self, dc):
-        self.surface = dc['surface']
-        self.base = dc['base']
-        self.pos = dc['pos']
-        self.pos1 = dc['pos1']
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
 
+# 環境変数からAPIキーを読み込む
+load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
 
-class Chunk:
-    def __init__(self, morphs, dst):
-        self.morphs = morphs    # 形態素（Morphオブジェクト）のリスト
-        self.dst = dst          # 係り先文節インデックス番号
-        self.srcs = []          # 係り元文節インデックス番号のリスト
+# APIキーを設定
+genai.configure(api_key=api_key)
 
+# 計測対象のテキスト
+text = """
+吾輩は猫である。名前はまだ無い。
 
-def parse_cabocha(block):
-    def check_create_chunk(tmp):
-        if len(tmp) > 0:
-            c = Chunk(tmp, dst)
-            res.append(c)
-            tmp = []
-        return tmp
+どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。吾輩はここで始めて人間というものを見た。しかもあとで聞くとそれは書生という人間中で一番獰悪な種族であったそうだ。この書生というのは時々我々を捕えて煮て食うという話である。しかしその当時は何という考もなかったから別段恐しいとも思わなかった。ただ彼の掌に載せられてスーと持ち上げられた時何だかフワフワした感じがあったばかりである。掌の上で少し落ちついて書生の顔を見たのがいわゆる人間というものの見始であろう。この時妙なものだと思った感じが今でも残っている。第一毛をもって装飾されべきはずの顔がつるつるしてまるで薬缶だ。その後猫にもだいぶ逢ったがこんな片輪には一度も出会わした事がない。のみならず顔の真中があまりに突起している。そうしてその穴の中から時々ぷうぷうと煙を吹く。どうも咽せぽくて実に弱った。これが人間の飲む煙草というものである事はようやくこの頃知った。
+"""
 
-    res = []
-    tmp = []
-    dst = None
-    for line in block.split('\n'):
-        if line == '':
-            tmp = check_create_chunk(tmp)
-        elif line[0] == '*':
-            dst = line.split(' ')[2].rstrip('D')
-            tmp = check_create_chunk(tmp)
-        else:
-            (surface, attr) = line.split('\t')
-            attr = attr.split(',')
-            lineDict = {
-                'surface': surface,
-                'base': attr[6],
-                'pos': attr[0],
-                'pos1': attr[1]
-            }
-            tmp.append(Morph(lineDict))
+# トークン数を計測するプロンプト
+prompt = f"""
+以下のテキストのトークン数を計測してください。
+トークン数とは、テキストを処理する際の最小単位です。
+日本語の場合、文字、句読点、空白などがトークンとしてカウントされます。
 
-    for i, r in enumerate(res):
-        res[int(r.dst)].srcs.append(i)
-    return res
+テキスト:
+{text}
 
+トークン数を数えて、その結果を出力してください。
+また、トークンの内訳（文字、句読点、空白など）も可能であれば示してください。
+"""
 
-def convert(s):
-    pl, nl = [], [c for c in s if '名詞' in [m.pos for m in c.morphs]]
-    for i in range(len(nl) - 1):
-        st1 = [''.join([m.surface if m.pos != '名詞' else 'X' for m in nl[i].morphs])]
-        for e in nl[i + 1:]:
-            dst, p = nl[i].dst, []
-            st2 = [''.join([m.surface if m.pos != '名詞' else 'Y' for m in e.morphs])]
-            while int(dst) != -1 and dst != s.index(e):
-                p.append(s[int(dst)])
-                dst = s[int(dst)].dst
-            if len(p) < 1 or p[-1].dst != -1:
-                mid = [''.join([m.surface for m in c.morphs if m.pos != '記号']) for c in p]
-                pl.append(st1 + mid + ['Y'])
-            else:
-                mid, dst = [], e.dst
-                while not s[int(dst)] in p:
-                    mid.append(''.join([m.surface for m in s[int(dst)].morphs if m.pos != '記号']))
-                    dst = s[int(dst)].dst
-                ed = [''.join([m.surface for m in s[int(dst)].morphs if m.pos != '記号'])]
-                pl.append([st1, st2 + mid, ed])
-    return pl
+# モデルの設定
+model = genai.GenerativeModel("gemini-1.5-flash-8b")
 
+# トークン数を計測
+response = model.generate_content(prompt)
 
-filename = 'ch05/ai.ja.txt.cabocha'
-with open(filename, mode='rt', encoding='utf-8') as f:
-    blocks = f.read().split('EOS\n')
-blocks = list(filter(lambda x: x != '', blocks))
-blocks = [parse_cabocha(block) for block in blocks]
+# 結果の表示
+print("トークン数計測結果:")
+print(response.text)
 
-for b in blocks:
-    pl = (convert(b))
-    for p in pl:
-        if isinstance(p[0], str):
-            print(' -> '.join(p))
-        else:
-            print(p[0][0], ' -> '.join(p[1]), p[2][0], sep=' | ')
+# Geminiのトークンカウント機能を使用
+print("\nGeminiのトークンカウント機能を使用:")
+# トークン数を計測
+token_count = model.count_tokens(text)
+print(f"トークン数: {token_count}")

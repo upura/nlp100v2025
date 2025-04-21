@@ -5,7 +5,7 @@ def extract_chars(i, word):
         return (word[:2], i)
 
 
-raw_text = 'Hi He Lied Because Boron Could Not Oxidize Fluorine. New Nations Might Also Sign Peace Security Clause. Arthur King Can.'
-text = raw_text.replace('.', '').replace(',', '')
+raw_text = "Hi He Lied Because Boron Could Not Oxidize Fluorine. New Nations Might Also Sign Peace Security Clause. Arthur King Can."
+text = raw_text.replace(".", "").replace(",", "")
 ans = [extract_chars(i, w) for i, w in enumerate(text.split(), 1)]
 print(dict(ans))

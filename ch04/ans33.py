@@ -1,31 +1,30 @@
-def parse_mecab(block):
-    res = []
-    for line in block.split('\n'):
-        if line == '':
-            return res
-        (surface, attr) = line.split('\t')
-        attr = attr.split(',')
-        lineDict = {
-            'surface': surface,
-            'base': attr[6],
-            'pos': attr[0],
-            'pos1': attr[1]
-        }
-        res.append(lineDict)
+import spacy
 
 
-def extract_a_no_b(block):
-    res = []
-    for i in range(1, len(block) - 1):
-        if block[i - 1]['pos'] == '名詞' and block[i]['base'] == 'の' and block[i + 1]['pos'] == '名詞':
-            res.append(block[i - 1]['surface'] + block[i]['surface'] + block[i + 1]['surface'])
-    return res
+def analyze_dependencies(text):
+    # 日本語のモデルをロード
+    nlp = spacy.load("ja_ginza")
+
+    # テキストを解析
+    doc = nlp(text)
+
+    # 係り受け関係を抽出
+    for token in doc:
+        if token.dep_ != "ROOT":  # ROOTは係り先がないので除外
+            # 係り元と係り先のテキストを取得
+            source = token.text
+            target = token.head.text
+            # タブ区切りで出力
+            print(f"{source}\t{target}")
 
 
-filename = 'ch04/neko.txt.mecab'
-with open(filename, mode='rt', encoding='utf-8') as f:
-    blocks = f.read().split('EOS\n')
-blocks = list(filter(lambda x: x != '', blocks))
-blocks = [parse_mecab(block) for block in blocks]
-ans = [extract_a_no_b(block) for block in blocks]
-print(ans)
+# テスト用のテキスト
+text = """メロスは激怒した。
+必ず、かの邪智暴虐の王を除かなければならぬと決意した。
+メロスには政治がわからぬ。
+メロスは、村の牧人である。
+笛を吹き、羊と遊んで暮して来た。
+けれども邪悪に対しては、人一倍に敏感であった。"""
+
+# 係り受け解析を実行
+analyze_dependencies(text)

@@ -1,36 +1,26 @@
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from gensim.models import KeyedVectors
+from sklearn.manifold import TSNE
 
-X_train = pd.read_table('ch06/train.feature.txt', header=None)
-X_valid = pd.read_table('ch06/valid.feature.txt', header=None)
-X_test = pd.read_table('ch06/test.feature.txt', header=None)
-y_train = pd.read_table('ch06/train.txt', header=None)[1]
-y_valid = pd.read_table('ch06/valid.txt', header=None)[1]
-y_test = pd.read_table('ch06/test.txt', header=None)[1]
+df = pd.read_csv("ch06/questions-words.txt", sep=" ")
+df = df.reset_index()
+df.columns = ["v1", "v2", "v3", "v4"]
+df.dropna(inplace=True)
+df = df.iloc[:5030]
+country = list(set(df["v4"].values))
 
-test_acc = []
+model = KeyedVectors.load_word2vec_format(
+    "ch06/GoogleNews-vectors-negative300.bin", binary=True
+)
 
-C_candidate = [0.1, 1.0, 10, 100]
-for c in C_candidate:
-    clf = LogisticRegression(penalty='l2', solver='sag', random_state=0, C=c)
-    clf.fit(X_train, y_train)
-    test_acc.append(accuracy_score(y_test, clf.predict(X_test)))
+countryVec = []
+for c in country:
+    countryVec.append(model[c])
 
-
-max_depth_candidate = [2, 4, 8, 16]
-for m in max_depth_candidate:
-    clf = RandomForestClassifier(max_depth=m, random_state=0)
-    clf.fit(X_train, y_train)
-    test_acc.append(accuracy_score(y_test, clf.predict(X_test)))
-
-bestIndex = test_acc.index(max(test_acc))
-if bestIndex < 4:
-    bestAlg = 'LogisticRegression'
-    bestParam = f'C={C_candidate[bestIndex]}'
-else:
-    bestAlg = 'RandomForestClassifier'
-    bestParam = f'max_depth={max_depth_candidate[bestIndex - 4]}'
-
-print(bestAlg, bestParam)
+X = np.array(countryVec)
+tsne = TSNE(random_state=0, n_iter=15000, metric="cosine")
+embs = tsne.fit_transform(X)
+plt.scatter(embs[:, 0], embs[:, 1])
+plt.show()

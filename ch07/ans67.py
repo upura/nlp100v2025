@@ -1,22 +1,48 @@
-import numpy as np
 import pandas as pd
-from gensim.models import KeyedVectors
-from sklearn.cluster import KMeans
+import pickle
+from collections import defaultdict
+from sklearn.metrics import (
+    precision_score,
+    recall_score,
+    f1_score,
+)
 
-df = pd.read_csv('ch07/questions-words.txt', sep=' ')
-df = df.reset_index()
-df.columns = ['v1', 'v2', 'v3', 'v4']
-df.dropna(inplace=True)
-df = df.iloc[:5030]
-country = list(set(df["v4"].values))
 
-model = KeyedVectors.load_word2vec_format('ch07/GoogleNews-vectors-negative300.bin', binary=True)
+def add_feature(sentence, label):
+    data = {"sentence": sentence, "label": label, "feature": defaultdict(int)}
+    for token in sentence.split():
+        data["feature"][token] += 1
+    return data
 
-countryVec = []
-for c in country:
-    countryVec.append(model[c])
 
-X = np.array(countryVec)
-km = KMeans(n_clusters=5, random_state=0)
-y_km = km.fit_predict(X)
-print(y_km)
+# モデルとベクトライザーの読み込み
+with open("ch07/logistic_model.pkl", "rb") as f:
+    model = pickle.load(f)
+with open("ch07/vectorizer.pkl", "rb") as f:
+    vec = pickle.load(f)
+
+# 検証データの読み込み
+df_dev = pd.read_csv("ch07/SST-2/dev.tsv", sep="\t")
+
+# 特徴ベクトルの構築
+data_dev = []
+for sentence, label in zip(df_dev["sentence"], df_dev["label"]):
+    data_dev.append(add_feature(sentence, label))
+
+# 特徴ベクトルの変換
+X_dev = vec.transform([d["feature"] for d in data_dev])
+y_dev = [d["label"] for d in data_dev]
+
+# 予測
+y_dev_pred = model.predict(X_dev)
+
+# 評価指標の計算
+precision = precision_score(y_dev, y_dev_pred)
+recall = recall_score(y_dev, y_dev_pred)
+f1 = f1_score(y_dev, y_dev_pred)
+
+# 結果の表示
+print("検証データにおける評価指標:")
+print(f"適合率 (Precision): {precision:.4f}")
+print(f"再現率 (Recall): {recall:.4f}")
+print(f"F1スコア: {f1:.4f}")

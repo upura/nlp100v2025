@@ -1,16 +1,17 @@
-# 言語処理100本ノック 2020
+# 言語処理100本ノック 2025
 
-- Python 3.11.3
+- Python 3.11.11
+- macOS 15.3
 
 ## How to run
 
 ```bash
-❯ python3 -m venv env
-❯ source env/bin/activate
-env ❯ pip install -r requirements.txt
+❯ uv sync
+❯ . .venv/bin/activate
 env ❯ python ch01/ans00.py
 ```
 
 ## Articles written in Japanese
 
-https://upura.hatenablog.com/entry/2020/04/14/024948
+- 2025 年版: https://upura.hatenablog.com/entry/2025/04/08/103120
+- 2020 年版: https://upura.hatenablog.com/entry/2020/04/14/024948

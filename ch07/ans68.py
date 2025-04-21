@@ -1,26 +1,31 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from gensim.models import KeyedVectors
-from scipy.cluster.hierarchy import dendrogram, linkage
+import pickle
 
-df = pd.read_csv('ch07/questions-words.txt', sep=' ')
-df = df.reset_index()
-df.columns = ['v1', 'v2', 'v3', 'v4']
-df.dropna(inplace=True)
-df = df.iloc[:5030]
-country = list(set(df["v4"].values))
+# モデルとベクトライザーの読み込み
+with open("ch07/logistic_model.pkl", "rb") as f:
+    model = pickle.load(f)
+with open("ch07/vectorizer.pkl", "rb") as f:
+    vec = pickle.load(f)
 
-model = KeyedVectors.load_word2vec_format('ch07/GoogleNews-vectors-negative300.bin', binary=True)
+# 特徴量名の取得
+feature_names = vec.get_feature_names_out()
 
-countryVec = []
-countryName = []
-for c in country:
-    countryVec.append(model[c])
-    countryName.append(c)
+# モデルの重みを取得
+weights = model.coef_[0]
 
-X = np.array(countryVec)
-linkage_result = linkage(X, method='ward', metric='euclidean')
-plt.figure(num=None, figsize=(16, 9), dpi=200, facecolor='w', edgecolor='k')
-dendrogram(linkage_result, labels=countryName)
-plt.show()
+# 重みと特徴量名のペアを作成
+weight_feature_pairs = list(zip(weights, feature_names))
+
+# 重みの高い特徴量トップ20を取得
+top_20_positive = sorted(weight_feature_pairs, key=lambda x: x[0], reverse=True)[:20]
+
+# 重みの低い特徴量トップ20を取得
+top_20_negative = sorted(weight_feature_pairs, key=lambda x: x[0])[:20]
+
+# 結果の表示
+print("重みの高い特徴量トップ20:")
+for i, (weight, feature) in enumerate(top_20_positive, 1):
+    print(f"{i}. {feature}: {weight:.4f}")
+
+print("\n重みの低い特徴量トップ20:")
+for i, (weight, feature) in enumerate(top_20_negative, 1):
+    print(f"{i}. {feature}: {weight:.4f}")

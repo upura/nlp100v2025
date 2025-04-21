@@ -1,120 +1,62 @@
-# ref: https://www.shoeisha.co.jp/book/detail/9784798157184
-import re
-from collections import defaultdict
-
-import joblib
 import pandas as pd
+from transformers import AutoTokenizer
 import torch
-from gensim.models import KeyedVectors
-from torch import nn, optim
-from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm
+
+# モデルとトークナイザーの読み込み
+model_id = "answerdotai/ModernBERT-base"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
 
 
-def cleanText(text):
-    remove_marks_regex = re.compile("[,\.\(\)\[\]\*:;]|<.*?>")
-    shift_marks_regex = re.compile("([?!])")
-    # !?以外の記号の削除
-    text = remove_marks_regex.sub("", text)
-    # !?と単語の間にスペースを挿入
-    text = shift_marks_regex.sub(r" \1 ", text)
-    return text
+# データの読み込み
+def load_data(file_path):
+    df = pd.read_csv(file_path, sep="\t", header=0)
+    return df["sentence"].tolist(), df["label"].tolist()
 
 
-def list2tensor(token_idxes, max_len=20, padding=True):
-    if len(token_idxes) > max_len:
-        token_idxes = token_idxes[:max_len]
-    n_tokens = len(token_idxes)
-    if padding:
-        token_idxes = token_idxes + [0] * (max_len - len(token_idxes))
-    return torch.tensor(token_idxes, dtype=torch.int64), n_tokens
+# テキストをトークン列に変換
+def tokenize_texts(texts):
+    tokenized_texts = []
+    for text in texts:
+        # トークン化（特殊トークンを追加）
+        tokens = tokenizer.tokenize(text)
+        tokenized_texts.append(tokens)
+    return tokenized_texts
 
 
-class CNN(nn.Module):
-    def __init__(self, num_embeddings,
-                 embedding_dim=300,
-                 hidden_size=300,
-                 output_size=1,
-                 kernel_size=3):
-        super().__init__()
-        # self.emb = nn.Embedding(num_embeddings, embedding_dim,
-        #                         padding_idx=0)
-        model = KeyedVectors.load_word2vec_format('ch07/GoogleNews-vectors-negative300.bin', binary=True)
-        weights = torch.FloatTensor(model.vectors)
-        self.emb = nn.Embedding.from_pretrained(weights)
-        self.content_conv = nn.Sequential(
-            nn.Conv1d(in_channels=embedding_dim,
-                      out_channels=hidden_size,
-                      kernel_size=kernel_size),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=(20 - kernel_size + 1))
-        )
-        self.linear = nn.Linear(hidden_size, output_size)
+# データファイルのパス
+train_path = "ch07/SST-2/train.tsv"
+dev_path = "ch07/SST-2/dev.tsv"
 
-    def forward(self, x):
-        x = self.emb(x)
-        content_out = self.content_conv(x.permute(0, 2, 1))
-        reshaped = content_out.view(content_out.size(0), -1)
-        x = self.linear(reshaped)
-        return x
+# 訓練データと開発データの読み込み
+train_texts, train_labels = load_data(train_path)
+dev_texts, dev_labels = load_data(dev_path)
 
+# トークン化の実行
+train_tokenized = tokenize_texts(train_texts)
+dev_tokenized = tokenize_texts(dev_texts)
 
-class TITLEDataset(Dataset):
-    def __init__(self, section='train'):
-        X_train = pd.read_table(f'ch06/{section}.txt', header=None)
-        use_cols = ['TITLE', 'CATEGORY']
-        X_train.columns = use_cols
+# 最初の4事例を選択
+sample_texts = train_texts[:4]
+sample_labels = train_labels[:4]
+sample_tokenized = train_tokenized[:4]
 
-        d = defaultdict(int)
-        for text in X_train['TITLE']:
-            text = cleanText(text)
-            for word in text.split():
-                d[word] += 1
-        dc = sorted(d.items(), key=lambda x: x[1], reverse=True)
+# パディングとトークンIDへの変換
+encoded = tokenizer(sample_texts, padding=True, truncation=True, return_tensors="pt")
 
-        words = []
-        idx = []
-        for i, a in enumerate(dc, 1):
-            words.append(a[0])
-            if a[1] < 2:
-                idx.append(0)
-            else:
-                idx.append(i)
+# 結果の表示
+print("元のテキスト:")
+for text in sample_texts:
+    print(f"- {text}")
 
-        self.word2token = dict(zip(words, idx))
-        self.data = (X_train['TITLE'].apply(lambda x: list2tensor(
-            [self.word2token[word] if word in self.word2token.keys() else 0 for word in cleanText(x).split()])))
+print("\nトークン列:")
+for tokens in sample_tokenized:
+    print(f"- {tokens}")
 
-        y_train = pd.read_table(f'ch06/{section}.txt', header=None)[1].values
-        self.labels = y_train
+print("\nパディング後のトークンID:")
+print(encoded["input_ids"])
 
-    @property
-    def vocab_size(self):
-        return len(self.word2token)
+print("\nアテンションマスク:")
+print(encoded["attention_mask"])
 
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        data, n_tokens = self.data[idx]
-        label = self.labels[idx]
-        return data, label, n_tokens
-
-
-if __name__ == "__main__":
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    batch_size = 640
-    train_data = TITLEDataset(section='train')
-    train_loader = DataLoader(train_data, batch_size=batch_size,
-                            shuffle=True, num_workers=4)
-
-    net = CNN(train_data.vocab_size + 1, output_size=4)
-    net = net.to(device)
-
-    for epoch in tqdm(range(10)):
-        net.train()
-        for x, y, nt in train_loader:
-            x = x.to(device)
-            y = y.to(device)
-            nt = nt.to(device)
-            y_pred = net(x)
+print("\nラベル:")
+print(torch.tensor(sample_labels))
