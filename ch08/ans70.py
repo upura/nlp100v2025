@@ -1,47 +1,62 @@
-import joblib
 import numpy as np
-import pandas as pd
 from gensim.models import KeyedVectors
-from tqdm import tqdm
+from typing import Dict, Tuple
 
 
-def culcSwem(row):
-    global model
-    swem = [model[w] if w in model.key_to_index else np.zeros(shape=(model.vector_size,)) for w in row['TITLE'].split()]
-    swem = np.mean(np.array(swem), axis=0)
-    return swem
+def load_word_embeddings(
+    model_path: str = "ch06/GoogleNews-vectors-negative300.bin",
+) -> Tuple[np.ndarray, Dict[str, int], Dict[int, str]]:
+    """
+    事前学習済み単語埋め込みを読み込み、単語埋め込み行列と単語-IDの対応関係を作成する。
+
+    Args:
+        model_path (str): 事前学習済み単語ベクトルのパス
+
+    Returns:
+        Tuple[np.ndarray, Dict[str, int], Dict[int, str]]:
+            - 単語埋め込み行列 (語彙数+1 × 次元数)
+            - 単語からIDへの辞書
+            - IDから単語への辞書
+    """
+    # 事前学習済み単語ベクトルを読み込む
+    model = KeyedVectors.load_word2vec_format(model_path, binary=True)
+
+    # 語彙数を取得
+    vocab_size = len(model.key_to_index)
+    embedding_dim = model.vector_size
+
+    # 単語埋め込み行列を作成（語彙数+1 × 次元数）
+    # 先頭行はパディングトークン用のゼロベクトル
+    embedding_matrix = np.zeros((vocab_size + 1, embedding_dim))
+
+    # 単語からIDへの辞書とIDから単語への辞書を作成
+    word_to_id = {"<PAD>": 0}  # パディングトークンのIDは0
+    id_to_word = {0: "<PAD>"}
+
+    # 単語埋め込み行列の2行目以降に事前学習済み単語ベクトルを格納
+    for i, word in enumerate(model.key_to_index, start=1):
+        embedding_matrix[i] = model[word]
+        word_to_id[word] = i
+        id_to_word[i] = word
+
+    return embedding_matrix, word_to_id, id_to_word
 
 
-X_train = pd.read_table('ch06/train.txt', header=None)
-X_valid = pd.read_table('ch06/valid.txt', header=None)
-X_test = pd.read_table('ch06/test.txt', header=None)
-use_cols = ['TITLE', 'CATEGORY']
-n_train = len(X_train)
-n_valid = len(X_valid)
-n_test = len(X_test)
-X_train.columns = use_cols
-X_valid.columns = use_cols
-X_test.columns = use_cols
+def main():
+    # 単語埋め込み行列と辞書を作成
+    embedding_matrix, word_to_id, id_to_word = load_word_embeddings()
 
-data = pd.concat([X_train, X_valid, X_test]).reset_index(drop=True)
+    # 結果の確認
+    print(f"単語埋め込み行列の形状: {embedding_matrix.shape}")
+    print(f"語彙数: {len(word_to_id)}")
+    print(f"埋め込み次元数: {embedding_matrix.shape[1]}")
 
-tqdm.pandas()
-model = KeyedVectors.load_word2vec_format('ch07/GoogleNews-vectors-negative300.bin', binary=True)
-swemVec = data.progress_apply(culcSwem, axis=1)
+    # サンプルとして最初の5単語を表示
+    print("\n最初の5単語:")
+    for i in range(1, 6):
+        word = id_to_word[i]
+        print(f"ID: {i}, 単語: {word}, ベクトル: {embedding_matrix[i][:5]}...")
 
-X_train = np.array(list(swemVec.values)[:n_train])
-X_valid = np.array(list(swemVec.values)[n_train:n_train + n_valid])
-X_test = np.array(list(swemVec.values)[n_train + n_valid:])
-joblib.dump(X_train, 'ch08/X_train.joblib')
-joblib.dump(X_valid, 'ch08/X_valid.joblib')
-joblib.dump(X_test, 'ch08/X_test.joblib')
 
-y_data = data['CATEGORY']
-
-y_train = y_data.values[:n_train]
-y_valid = y_data.values[n_train:n_train + n_valid]
-y_test = y_data.values[n_train + n_valid:]
-
-joblib.dump(y_train, 'ch08/y_train.joblib')
-joblib.dump(y_valid, 'ch08/y_valid.joblib')
-joblib.dump(y_test, 'ch08/y_test.joblib')
+if __name__ == "__main__":
+    main()
